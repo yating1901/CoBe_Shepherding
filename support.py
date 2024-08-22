@@ -3,10 +3,7 @@ calc.py : Supplementary methods and calculations necessary for agents
 """
 import numpy as np
 import matplotlib.cm
-import math
-from scipy import integrate
-# from share.doc.pycurl.examples.retriever import filename
-import os, json
+
 
 ### Supplementary Parameters ###
 BLACK = (0, 0, 0)

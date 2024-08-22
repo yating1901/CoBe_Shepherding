@@ -9,6 +9,11 @@ from shepherd_agent import Shepherd_Agent
 import support
 import os, json
 
+# Only works on Windows
+import SpoutGL
+from OpenGL import GL
+
+
 class Loop_Function:
     def __init__(self, N_sheep=10, N_shepherd = 1, Time=1000, width=500, height=500,
                  target_place_x = 1000, target_place_y = 1000, target_size = 200,
@@ -53,6 +58,9 @@ class Loop_Function:
         # Agent parameters
         self.agent_radii = agent_radius
 
+        # Spout Sender to send visualization to Resolume Arena in CoBe
+        self.sender = SpoutGL.SpoutSender()
+        self.sender.setSenderName("Python Spout Sender")
 
         # Initializing pygame
         pygame.init()
@@ -71,6 +79,23 @@ class Loop_Function:
 
         self.screen = pygame.display.set_mode([self.WIDTH + 2 * self.window_pad, self.HEIGHT + 2 * self.window_pad])
         self.clock = pygame.time.Clock()
+
+    def position_transform(self, robot_data):
+        """Transforming x and y coordinates between optitrack and CAB conventions.
+        Optitrack goes W/2 to -W/2 on the horizontal axis and W/2 to -W/2 on the vertical
+        CAB goes from 0 to W on horizontal and from 0 to H on vertical axis.
+        robot_data is list of dictionaries"""
+        W = self.WIDTH
+        H = self.HEIGHT
+        new_robot_data = []
+        for robot_dict in robot_data:
+            new_robot_dict = robot_dict.copy()
+            new_robot_dict["x0"] = - float(robot_dict["x0"]) + (W / 2)
+            new_robot_dict["x1"] = - float(robot_dict["x1"]) + (H / 2)
+            new_robot_data.append(new_robot_dict)
+
+        return new_robot_data
+
 
     def draw_walls(self):
         """Drawing walls on the arena according to initialization, i.e. width, height and padding"""
@@ -107,37 +132,38 @@ class Loop_Function:
 
     def draw_agent_stats(self, font_size=15, spacing=0):
         """Showing agent information when paused"""
-        font = pygame.font.Font(None, font_size)
-        for agent in self.agents:
-            if agent.is_moved_with_cursor or agent.show_stats:
-                if agent.id[0:5] == "sheep":
-                    status = [
-                        f"ID: {agent.id[5:]}",
-                        # f"ori.: {180*(agent.orientation/np.pi):.2f}"
-                    ]
-                else:
-                    if agent.state == 1.0:
-                        # drive mode
-                        status = [
-                            f"ID: {agent.id[8:]}",
-                            # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
-                            f"Drive: {agent.drive_agent_id}"
-                        ]
-                    else:
-                        # collect mode
-                        status = [
-                            f"ID: {agent.id[8:]}",
-                            # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
-                            f"Collect: {agent.collect_agent_id}"
-                        ]
-                for i, stat_i in enumerate(status):
-                    text = font.render(stat_i, True, support.BLACK)
-                    if agent.id[0:5] == "sheep":
-                        self.screen.blit(text, (agent.position[0] + 2 * agent.radius,
-                                            agent.position[1] + 2 * agent.radius + i * (font_size + spacing)))
-                    else:
-                        self.screen.blit(text, (agent.x + 2 * agent.radius,
-                                                agent.y + 2 * agent.radius + i * (font_size + spacing)))
+        pass
+        # font = pygame.font.Font(None, font_size)
+        # for agent in self.agents:
+        #     if agent.is_moved_with_cursor or agent.show_stats:
+        #         if agent.id[0:5] == "sheep":
+        #             status = [
+        #                 f"ID: {agent.id[5:]}",
+        #                 # f"ori.: {180*(agent.orientation/np.pi):.2f}"
+        #             ]
+        #         else:
+        #             if agent.state == 1.0:
+        #                 # drive mode
+        #                 status = [
+        #                     f"ID: {agent.id[8:]}, x:{agent.x}, y:{agent.y}",
+        #                     # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
+        #                     f"Drive: {agent.drive_agent_id}"
+        #                 ]
+        #             else:
+        #                 # collect mode
+        #                 status = [
+        #                     f"ID: {agent.id[8:]}, x:{agent.x}, y:{agent.y}",
+        #                     # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
+        #                     f"Collect: {agent.collect_agent_id}"
+        #                 ]
+        #         for i, stat_i in enumerate(status):
+        #             text = font.render(stat_i, True, support.BLACK)
+        #             if agent.id[0:5] == "sheep":
+        #                 self.screen.blit(text, (agent.position[0] + 2 * agent.radius,
+        #                                     agent.position[1] + 2 * agent.radius + i * (font_size + spacing)))
+        #             else:
+        #                 self.screen.blit(text, (agent.x + 2 * agent.radius,
+        #                                         agent.y + 2 * agent.radius + i * (font_size + spacing)))
 
     def agent_agent_collision(self, agent1, agent2):
         """collision protocol called on any agent that has been collided with another one
@@ -299,6 +325,8 @@ class Loop_Function:
         self.draw_framerate()
         self.draw_agent_stats()
 
+
+
     def draw_agent_zones(self):
         for agent in self.agents:
             image = pygame.Surface([self.WIDTH + self.window_pad, self.HEIGHT + self.window_pad])
@@ -363,17 +391,25 @@ class Loop_Function:
 
                 #update robot position from external system
                 if self.robot_loop:
-                    path = os.getcwd()
-                    robot_file = path + "/agent_list.json"
-                    robot_data = self.load_robot_state(robot_file)
-                    # print(robot_data[0], "\n", robot_data[0]["ID"], robot_data[0]["x0"], robot_data[0]["x1"])
+                    # path = "" # os.getcwd()
+                    robot_file = "C:\\Users\\David\\CoBe\\middleware\\agent_list.json"  #path + "/agent_list.json"
+                    try:
 
-                    # Updating robot position for shepherd agents
-                    for shepherd_agent in self.shepherd_agents:
-                        # print(shepherd_agent.id, shepherd_agent.id[9:])
-                        if int(shepherd_agent.id[9:]) == int(robot_data[0]["ID"]):
-                            shepherd_agent.x = float(robot_data[0]["x0"])
-                            shepherd_agent.y = float(robot_data[0]["x1"])
+                        robot_data = self.load_robot_state(robot_file)
+                        robot_data = self.position_transform(robot_data)
+
+                        # Updating robot position for shepherd agents
+                        for shepherd_agent in self.shepherd_agents:
+                            # print(shepherd_agent.id, shepherd_agent.id[9:])
+                            if int(shepherd_agent.id[9:]) == int(robot_data[0]["ID"]):
+                                shepherd_agent.x = float(robot_data[0]["x0"])
+                                shepherd_agent.y = float(robot_data[0]["x1"])
+
+                    except:
+
+                        robot_data = None
+
+
 
                 # Update agents
                 self.sheep_agents.update(self.sheep_agents, self.shepherd_agents)
@@ -385,6 +421,10 @@ class Loop_Function:
             # Draw environment and agents
             if self.with_visualization:
                 self.draw_frame()
+                flipped_screen = pygame.transform.flip(self.screen, True, True)
+                result = self.sender.sendImage(pygame.image.tostring(flipped_screen, 'RGBA'), flipped_screen.get_width(),
+                                               flipped_screen.get_height(), GL.GL_RGBA, False, 0)
+                self.sender.setFrameSync("Python Spout Sender")
                 pygame.display.flip()
 
             # Moving time forward

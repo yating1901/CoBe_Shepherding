@@ -1,6 +1,3 @@
-from initiation import initiate
-
-
 Target_place_x = 800
 Target_place_y = 800
 Target_size = 100  # radius
@@ -12,8 +9,8 @@ Boundary_y = Target_place_y + Target_size
 TICK = 1
 Iterations = 10000
 
-N_sheep = 5
-N_shepherd = 2
+N_sheep = 10
+N_shepherd = 3
 L3 = 100
 
 Robot_Loop = True

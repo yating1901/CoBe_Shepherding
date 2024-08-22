@@ -117,9 +117,9 @@ class Sheep_Agent(pygame.sprite.Sprite):
         self.att_distance = 50
         self.K_repulsion = 3  #25   #2 #15
         self.K_attraction = 8.0  #0.1 #8  # 0.8 #8
-        self.K_shepherd = 15  #5 #2.5 #1.5  #0.6 #18    #1.5 #12
+        self.K_shepherd = 50  #5 #2.5 #1.5  #0.6 #18    #1.5 #12
         self.K_Dr = 0.01  # noise_strength
-        self.tick_time = 0.01  #0.01  # tick_time
+        self.tick_time = 0.1  #0.01  # tick_time
         self.max_turning_angle = np.pi * 1 / 3
         self.f_avoid_x = 0.0
         self.f_avoid_y = 0.0
@@ -128,7 +128,7 @@ class Sheep_Agent(pygame.sprite.Sprite):
         self.num_rep = 0
 
         #####shepherd relative parameters#########
-        self.safe_distance = 200
+        self.safe_distance = 500
         self.f_shepherd_force_x = 0.0
         self.f_shepherd_force_y = 0.0
 
