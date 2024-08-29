@@ -97,24 +97,25 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         self.v0 = 1
         self.x = self.position[0]
         self.y = self.position[1]
-        self.v_upper = 3
-        self.target_x = target_x
-        self.target_y = target_y
+        self.v_upper = 2
+        self.target_x = target_x - target_size/2
+        self.target_y = target_y - target_size/2
         self.target_size = target_size
         self.l0 = 10  # L0: collect point: from shepherd to the collect agent
         self.l1 = 10  # L1: drive point: from shepherd to drive agent
         self.l2 = 70  # L2: d_furthest in collect mode
         self.l3 = L3  # L3: distance to avoid other shepherd
         self.state = 1.0  # shepherd state: 1.0 --> drive_mode = true
-        self.alpha = 1  # acceleration rate
-        self.beta = 0.1  # turning rate
+        self.alpha = 0.1  # acceleration rate
+        self.beta = 0.08  # turning rate
         self.Dr = 0.1  # noise
-        self.tick_time = 0.01  #0.01
+        self.tick_time = 0.1  #0.01
         self.drive_agent_id = 0
         self.collect_agent_id = 0
         self.Angle_Threshold_Collection = np.pi / 2  # HALF FOV threshold for collect mode;
         self.FOV_Drive = np.pi / 3  # Relative FOV threshold for drive mode;
         self.K_attraction_target = 0.01  # K_attraction_target   0.01
+        self.max_turning_angle = np.pi * 1 / 2
 
         self.f_x_other_shepherd = 0.0
         self.f_y_other_shepherd = 0.0
@@ -194,8 +195,8 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         agent_index = 0
         for agent in sheep_agents:
             # calculate angle_Shepherd_Sheep;
-            agent_x = agent.position[0]
-            agent_y = agent.position[1]
+            agent_x = agent.x
+            agent_y = agent.y
             radius = agent.radius  # could be extended to heterogeneous;
             # get the distance between the shepherd and the agent;
             distance_ss, projection_pos = self.calculate_relative_distance_angle(agent_x, agent_y, self.x, self.y)
@@ -222,8 +223,8 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         agent_y = 0.0
         for agent in sheep_agents:
             if int(agent.id[7:]) == approach_agent_id:
-                agent_x = agent.position[0]
-                agent_y = agent.position[1]
+                agent_x = agent.x
+                agent_y = agent.y
         # calculate the distance, angle between the center of the mass and the shepherd;
         distance_agent_target, angle_agent_target = self.calculate_relative_distance_angle(agent_x,
                                                                                            agent_y,
@@ -267,8 +268,8 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         for agent in sheep_agents:
             # the furthest agent should only in the moving state;
             if agent.state == "moving":
-                agent_x = agent.position[0]
-                agent_y = agent.position[1]
+                agent_x = agent.x
+                agent_y = agent.y
                 r_agent_herd, angle_agent_herd = self.calculate_relative_distance_angle(agent_x, agent_y, self.x, self.y)
                 angle_herd_agents[agent_index] = angle_agent_herd  # [-pi, pi]
                 dirt_angle_from_target_to_herd = support.transform_angle(angle_target_herd - angle_agent_herd)  # [-pi, pi]
@@ -299,33 +300,42 @@ class Shepherd_Agent(pygame.sprite.Sprite):
             # drive the closet agent, update the drive agent id, update drive force;
             self.drive_the_herd_using_vision(sheep_agents, n_sheep)
 
-            # check if it is necessary to switch to collect mode;
+            # check if it is necessary to switch to collect mode and return the furthest agent id;
             max_agent_index, r_agent, max_angle_target_to_agent = self.Get_furthest_agent(sheep_agents, n_sheep)
-            # max_angle_target_to_agent +: clockwise, -: anti-clockwise; threshold = np.pi/3
-            if np.absolute(max_angle_target_to_agent) > self.Angle_Threshold_Collection:
-                # check if furtherst agent is moving:
-                for agent in sheep_agents:
-                    if int(agent.id[7:]) == max_agent_index and agent.state == "moving":
+
+            for agent in sheep_agents:
+                # switch to collect mode if the drive agent is staying:
+                if int(agent.id[7:]) == self.drive_agent_id and agent.state == "staying":
+                    self.state = 0.0
+                    # lock the ID of the furthest agent for the collect mode;
+                    self.collect_agent_id = int(max_agent_index)
+                    break
+                # switch to collect mode if the furthest agent is far from the group enough
+                # and remained in moving state
+                if int(agent.id[7:]) == max_agent_index:
+                    # max_angle_target_to_agent +: clockwise, -: anti-clockwise; threshold = np.pi/3
+                    if (np.absolute(max_angle_target_to_agent) > self.Angle_Threshold_Collection) and (agent.state == "moving"):
                         # collect_mode = true
                         self.state = 0.0
                         # lock the ID of the furthest agent for the collect mode;
                         self.collect_agent_id = int(max_agent_index)
-
-        # collect mode
         else:
+            # collect mode
             self.color = support.BLUE
-            # if the agent is closer enough to ANY AGENT in the GROUP or the agents are staying inside the circe;
+            # Switch to drive mode:
             # get the center of projection of the GROUP
             angle_difference_agent_mass = self.collect_the_herd_using_vision(sheep_agents, n_sheep)
-            if angle_difference_agent_mass <= np.pi / 3:
-                for agent in sheep_agents:
-                    if int(agent.id[7:]) == self.collect_agent_id and agent.state == "moving":
+            for agent in sheep_agents:
+                if int(agent.id[7:]) == self.collect_agent_id:
+                    # IF the collecting agent is closer enough to ANY AGENT in the GROUP
+                    # Or IF the collecting agent are staying inside the circe;
+                    if (angle_difference_agent_mass <= np.pi / 3) or (agent.state == "staying"):
                         self.state = 1.0  # drive_mode_true
 
+        self.get_sheep_agent(sheep_agents)
         # drive/collect the cloest/furtherest agent toward the target;
         # update drive agent force:self.f_drive_agent_x; self.f_drive_agent_y;
         # Note: there is ONLY drive_agent_force now!!!
-        self.get_sheep_agent(sheep_agents)
         return
 
     def update(self, n_sheep, sheep_agents, shepherd_agents):
@@ -336,15 +346,22 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         :param sheep_agents:
         """
         self.reflect_from_walls(self.boundary)
+        self.reflect_from_fence()
+
         self.update_shepherd_forces(shepherd_agents)
         self.herd_sheep_agents(sheep_agents, n_sheep)
 
         F_x = self.f_x_other_shepherd + self.f_drive_agent_x
         F_y = self.f_y_other_shepherd + self.f_drive_agent_y
         # calculate the linear speed and angular speed;
-        v_dot = F_x * np.cos(self.orientation) + F_y * np.sin(self.orientation)  # heading_direction_acceleration
+        v_dot = F_x * np.cos(self.orientation) + F_y * np.sin(self.orientation)   # heading_direction_acceleration
         w_dot = -F_x * np.sin(self.orientation) + F_y * np.cos(self.orientation)  # angular_acceleration
         # alpha: acceleration rate; beta: turning rate;
+
+        if w_dot > self.max_turning_angle:
+            w_dot = self.max_turning_angle
+        if w_dot <= -self.max_turning_angle:
+            w_dot = -self.max_turning_angle
 
         # noise = np.sqrt(2 * self.Dr) / (self.tick_time ** 0.5) * np.random.normal(0, 1)
 
@@ -370,12 +387,6 @@ class Shepherd_Agent(pygame.sprite.Sprite):
         self.rect.x = self.x
         self.rect.y = self.y
 
-        # # change agent color according to mode
-        # if self.change_color_with_orientation:
-        #     self.change_color()
-        # else:
-        #     self.color = self.orig_color
-
         # update surface according to new orientation
         # creating visualization surface for agent as a filled circle
         self.image = pygame.Surface([self.radius * 2, self.radius * 2])
@@ -395,6 +406,54 @@ class Shepherd_Agent(pygame.sprite.Sprite):
                          ((1 + np.cos(self.orientation)) * self.radius, (1 + np.sin(self.orientation)) * self.radius),
                          3)
         self.mask = pygame.mask.from_surface(self.image)
+
+    def reflect_from_fence(self):
+        # Boundary conditions according to center of agent (simple)
+        self.orientation = support.reflect_angle(self.orientation)  # [0, 2pi]
+        fence_width = 10
+        # if self.state == "moving":
+            # Reflection from left fence
+        if (self.x > self.target_x - self.target_size - fence_width) and (
+                self.y >= self.target_y - self.window_pad):
+
+            self.x = self.target_x - self.target_size - fence_width - 1
+
+            if 3 * np.pi / 2 <= self.orientation < 2 * np.pi:
+                self.orientation -= np.pi / 2
+            elif 0 <= self.orientation <= np.pi / 2:
+                self.orientation += np.pi / 2
+        # Reflection from upper fence
+        if (self.y > self.target_y - self.target_size - fence_width) and (
+                self.x >= self.target_x - self.window_pad):
+
+            self.y = self.target_y - self.target_size - fence_width - 1
+
+            if np.pi / 2 <= self.orientation <= np.pi:
+                self.orientation += np.pi / 2
+            elif 0 <= self.orientation < np.pi / 2:
+                self.orientation -= np.pi / 2
+
+        # if self.state == "staying":
+        #     # Reflection from left wall
+        #     if (self.x < self.target_x - self.target_size + fence_width) and (
+        #             self.y >= self.target_y - self.window_pad):
+        #         self.x = self.target_x - self.target_size + fence_width + 1
+        #         if np.pi / 2 <= self.orientation < np.pi:
+        #             self.orientation -= np.pi / 2
+        #         elif np.pi <= self.orientation <= 3 * np.pi / 2:
+        #             self.orientation += np.pi / 2
+        #
+        #     # Reflection from upper wall
+        #     if (self.y < self.target_y - self.target_size + fence_width) and (
+        #             self.x >= self.target_x - self.window_pad):
+        #         self.y = self.target_y - self.target_size + fence_width + 1
+        #         if np.pi < self.orientation <= np.pi * 3 / 2:
+        #             self.orientation -= np.pi / 2
+        #         elif np.pi * 3 / 2 < self.orientation <= np.pi * 2:
+        #             self.orientation += np.pi / 2
+        # self.prove_orientation()  # bounding orientation into 0 and 2pi
+
+        self.orientation = support.reflect_angle(self.orientation)
 
     def reflect_from_walls(self, boundary_condition):
         """reflecting agent from environment boundaries according to a desired x, y coordinate. If this is over any
