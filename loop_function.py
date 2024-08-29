@@ -3,7 +3,7 @@ import numpy as np
 import sys
 from datetime import datetime
 from math import atan2
-from agent import Agent
+
 from sheep_agent import Sheep_Agent
 from shepherd_agent import Shepherd_Agent
 import support
