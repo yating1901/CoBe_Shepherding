@@ -7,13 +7,14 @@ Boundary_y = Target_place_y + Target_size
 
 
 TICK = 1
-Iterations = 10000
+Iterations = 200000
 
 N_sheep = 100
 N_shepherd = 3
 L3 = 50
 
 Robot_Loop = False
+Show_Animation = False
 
 from loop_function import Loop_Function
 
@@ -28,6 +29,7 @@ loop_function = Loop_Function(N_sheep=N_sheep,  # Number of agents in the enviro
                               framerate=50,
                               window_pad=30,
                               with_visualization=True,
+                              show_animation = Show_Animation,
                               agent_radius=10, # Agent radius in pixels
                               L3 = L3,  # repulsion distance
                               robot_loop = Robot_Loop)

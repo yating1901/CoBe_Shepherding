@@ -17,7 +17,7 @@ from OpenGL import GL
 class Loop_Function:
     def __init__(self, N_sheep=10, N_shepherd = 1, Time=1000, width=500, height=500,
                  target_place_x = 1000, target_place_y = 1000, target_size = 200,
-                 framerate=25, window_pad=30, with_visualization=True,
+                 framerate=25, window_pad=30, with_visualization=True, show_animation = False,
                  agent_radius=10, L3 = 20, robot_loop = False, physical_obstacle_avoidance=False):
         """
         Initializing the main simulation instance
@@ -49,6 +49,7 @@ class Loop_Function:
         self.Time = Time
         self.tick = 0
         self.with_visualization = with_visualization
+        self.show_animation = show_animation
         self.framerate_orig = framerate
         self.framerate = framerate
         self.is_paused = False
@@ -159,29 +160,36 @@ class Loop_Function:
         #     if agent.is_moved_with_cursor or agent.show_stats:
         #         if agent.id[0:5] == "sheep":
         #             status = [
-        #                 f"ID: {agent.id[5:]}",
+        #                 f"ID: {agent.id[7:]}",
+        #                 # f"X: {agent.x:.2f}",
+        #                 # f"Y: {agent.y:.2f}",
         #                 # f"ori.: {180*(agent.orientation/np.pi):.2f}"
         #             ]
         #         else:
+        #             # shepherd agent
         #             if agent.state == 1.0:
         #                 # drive mode
         #                 status = [
-        #                     f"ID: {agent.id[8:]}, x:{agent.x}, y:{agent.y}",
+        #                     # f"ID: {agent.id[10:]}",
         #                     # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
-        #                     f"Drive: {agent.drive_agent_id}"
+        #                     f"Drive: {agent.drive_agent_id}",
+        #                     # f"D_x: {agent.drive_point_x:.1f}",
+        #                     # f"D_y: {agent.drive_point_y:.1f}"
         #                 ]
         #             else:
         #                 # collect mode
         #                 status = [
-        #                     f"ID: {agent.id[8:]}, x:{agent.x}, y:{agent.y}",
+        #                     # f"ID: {agent.id[10:]}",
         #                     # f"ori.: {180 * (agent.orientation / np.pi):.2f}",
-        #                     f"Collect: {agent.collect_agent_id}"
+        #                     f"Collect: {agent.collect_agent_id}",
+        #                     # f"C_x: {agent.drive_point_x:.1f}",
+        #                     # f"C_y: {agent.drive_point_y:.1f}"
         #                 ]
         #         for i, stat_i in enumerate(status):
         #             text = font.render(stat_i, True, support.BLACK)
         #             if agent.id[0:5] == "sheep":
-        #                 self.screen.blit(text, (agent.position[0] + 2 * agent.radius,
-        #                                     agent.position[1] + 2 * agent.radius + i * (font_size + spacing)))
+        #                 self.screen.blit(text, (agent.x - 3 * agent.radius,
+        #                                         agent.y - 3 * agent.radius + i * (font_size + spacing)))
         #             else:
         #                 self.screen.blit(text, (agent.x + 2 * agent.radius,
         #                                         agent.y + 2 * agent.radius + i * (font_size + spacing)))
@@ -337,18 +345,19 @@ class Loop_Function:
         """Drawing environment, agents and every other visualization in each timestep"""
         self.screen.fill(support.BACKGROUND)
         self.draw_walls()
-        self.draw_background()
         self.draw_target_place()
 
         if self.show_zones:
             self.draw_agent_zones()
 
-        # self.agents.draw(self.screen)
-
         self.draw_framerate()
         self.draw_agent_stats()
 
-        self.draw_agent_animation()
+        if self.show_animation:
+            self.draw_background()
+            self.draw_agent_animation()
+        else:
+            self.agents.draw(self.screen)
 
 
     def draw_agent_animation(self):
