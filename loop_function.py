@@ -346,6 +346,7 @@ class Loop_Function:
         self.screen.fill(support.BACKGROUND)
         self.draw_walls()
         self.draw_target_place()
+        self.draw_network()
 
         if self.show_zones:
             self.draw_agent_zones()
@@ -403,6 +404,31 @@ class Loop_Function:
                 cx, cy, r = agent.position[0] + agent.radius, agent.position[1] + agent.radius, agent.r_alg
                 pygame.draw.circle(image, support.YELLOW, (cx, cy), r, width=3)
             self.screen.blit(image, (0, 0))
+
+    ################## show network##################################
+    def draw_network(self):
+        for agent in self.sheep_agents:
+            if agent.interact_network:
+                for neighbor_id in agent.interact_network:
+                    neighbor_x = self.sheep_agents.sprites()[neighbor_id].x
+                    neighbor_y = self.sheep_agents.sprites()[neighbor_id].y
+                    pygame.draw.line(self.screen, "grey", (agent.x, agent.y),
+                                     (neighbor_x, neighbor_y),
+                                     3)
+        for shepherd_agent in self.shepherd_agents:
+            target_agent_id = shepherd_agent.approach_agent_id
+            target_agent_x = self.sheep_agents.sprites()[target_agent_id].x
+            target_agent_y = self.sheep_agents.sprites()[target_agent_id].y
+            # pygame.draw.line(self.screen, "cornflowerblue", (shepherd_agent.x, shepherd_agent.y),
+            #                  (target_agent_x, target_agent_y),
+            #                  3)
+
+            # pygame.draw.line(self.screen, "cornflowerblue", (shepherd_agent.x, shepherd_agent.y),
+            #                  (shepherd_agent.target_x, shepherd_agent.target_y),
+            #                  3)
+            # pygame.draw.line(self.screen, "cornflowerblue", (shepherd_agent.x, shepherd_agent.y),
+            #                      (shepherd_agent.drive_point_x, shepherd_agent.drive_point_y),
+            #                      3)
 
     def load_robot_state(self, robot_file):
         with open(robot_file) as f:
