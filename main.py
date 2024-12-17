@@ -13,7 +13,7 @@ N_sheep = 60
 N_shepherd = 2
 L3 = 50
 Fps = 25
-Robot_Loop = False
+Robot_Loop = True
 Show_Animation = False
 
 from loop_function import Loop_Function
@@ -37,3 +37,5 @@ loop_function = Loop_Function(N_sheep=N_sheep,  # Number of agents in the enviro
 
 # we loop through all the agents of the created simulation
 print("Setting parameters for agent", end = ' ')
+
+loop_function.start()

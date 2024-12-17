@@ -101,11 +101,12 @@ class Loop_Function:
         robot_data is list of dictionaries"""
         W = self.WIDTH
         H = self.HEIGHT
+        WP = self.window_pad
         new_robot_data = []
         for robot_dict in robot_data:
             new_robot_dict = robot_dict.copy()
-            new_robot_dict["x0"] = - float(robot_dict["x0"]) + (W / 2)
-            new_robot_dict["x1"] = - float(robot_dict["x1"]) + (H / 2)
+            new_robot_dict["x0"] = - float(robot_dict["x0"]) + ((W + 2*WP) / 2)
+            new_robot_dict["x1"] = - float(robot_dict["x1"]) + ((H + 2*WP) / 2)
             new_robot_data.append(new_robot_dict)
 
         return new_robot_data
@@ -363,9 +364,9 @@ class Loop_Function:
 
     def draw_agent_animation(self):
         images_path = os.getcwd() + "/images/"
-        sheep_image = pygame.image.load(images_path + "sheep_1" + ".png")
+        sheep_image = pygame.image.load(images_path + "sheep_2" + ".png")
         # scale factor
-        sheep_scale = 0.05
+        sheep_scale = 0.1 #0.05
         #sheep_scale_2 = 0.064
         sheep_image = pygame.transform.scale(sheep_image, (
             int(sheep_image.get_width() * sheep_scale), int(sheep_image.get_height() * sheep_scale)))
@@ -426,9 +427,9 @@ class Loop_Function:
             # pygame.draw.line(self.screen, "cornflowerblue", (shepherd_agent.x, shepherd_agent.y),
             #                  (shepherd_agent.target_x, shepherd_agent.target_y),
             #                  3)
-            # pygame.draw.line(self.screen, "cornflowerblue", (shepherd_agent.x, shepherd_agent.y),
-            #                      (shepherd_agent.drive_point_x, shepherd_agent.drive_point_y),
-            #                      3)
+            pygame.draw.line(self.screen, "blue", (shepherd_agent.x, shepherd_agent.y),
+                                 (shepherd_agent.drive_point_x, shepherd_agent.drive_point_y),
+                                 6)
 
     def load_robot_state(self, robot_file):
         with open(robot_file) as f:
@@ -487,9 +488,10 @@ class Loop_Function:
                         # Updating robot position for shepherd agents
                         for shepherd_agent in self.shepherd_agents:
                             # print(shepherd_agent.id, shepherd_agent.id[9:])
-                            if int(shepherd_agent.id[9:]) == int(robot_data[0]["ID"]):
-                                shepherd_agent.x = float(robot_data[0]["x0"])
-                                shepherd_agent.y = float(robot_data[0]["x1"])
+                            ids = [data_dict["ID"] for data_dict in robot_data]
+                            if int(shepherd_agent.id[9:]) in ids:
+                                shepherd_agent.x = float(robot_data[int(shepherd_agent.id[9:])-1]["x0"])
+                                shepherd_agent.y = float(robot_data[int(shepherd_agent.id[9:])-1]["x1"])
 
                     except:
 
